@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Item represents an item in the Gilded Rose inn.
 type Item struct {
 	name    string
@@ -36,7 +38,8 @@ type MultiplierFunc func(*Item) int
 
 // Updater is an interface for an item which changes in quality at the end of each day.
 type Updater interface {
-	Update()
+	Update()        // String performs an update on the underlying data strcuture.
+	String() string // String returns a human redeable string for the underlying data strcuture.
 }
 
 // newItem returns a new item.
@@ -47,6 +50,8 @@ func newItem(name string, sellIn, quality int) Item {
 		quality: quality,
 	}
 }
+
+// -- CommonItem
 
 // NewCommonItem returns a new common item. Its quality multiplier is -1.
 func NewCommonItem(name string, sellIn, quality int) *CommonItem {
@@ -73,6 +78,13 @@ func (i *CommonItem) Update() {
 	i.quality = i.quality + 1*m
 }
 
+// String returns a human readable representation of the item.
+func (i CommonItem) String() string {
+	return fmt.Sprintf("%s, %d, %d", i.name, i.sellIn, i.quality)
+}
+
+// -- RareItem
+
 // NewRareItem returns a new rare item. Its quality multiplier is provided by multiplierFunc.
 func NewRareItem(name string, sellIn, quality int, multiplierFunc MultiplierFunc) *RareItem {
 	return &RareItem{
@@ -95,6 +107,13 @@ func (i *RareItem) Update() {
 	i.quality = i.quality + 1*m
 }
 
+// String returns a human readable representation of the item.
+func (i RareItem) String() string {
+	return fmt.Sprintf("%s, %d, %d", i.name, i.sellIn, i.quality)
+}
+
+// -- LegendaryItem
+
 // NewRareItem returns a new legendary item. It has no quality multiplier.
 func NewLegendaryItem(name string, sellIn, quality int) *LegendaryItem {
 	return &LegendaryItem{
@@ -104,6 +123,13 @@ func NewLegendaryItem(name string, sellIn, quality int) *LegendaryItem {
 
 // Update does nothing to the legendary item.
 func (i *LegendaryItem) Update() {}
+
+// String returns a human readable representation of the item.
+func (i LegendaryItem) String() string {
+	return fmt.Sprintf("%s, %d, %d", i.name, i.sellIn, i.quality)
+}
+
+// -- ConjuredItem
 
 // NewConjuredItem returns a new conjured item. Its quality multiplier is -2.
 func NewConjuredItem(name string, sellIn, quality int) *ConjuredItem {
@@ -130,66 +156,7 @@ func (i *ConjuredItem) Update() {
 	i.quality = i.quality + 1*m
 }
 
-func UpdateQuality(items []*Item) {
-	for i := 0; i < len(items); i++ {
-
-		// Update quality basically.
-		if items[i].name != "Aged Brie" && items[i].name != "Backstage passes to a TAFKAL80ETC concert" {
-			if items[i].quality > 0 {
-				// Legendary item is dealt with.
-				if items[i].name != "Sulfuras, Hand of Ragnaros" {
-					// Everything common.
-					items[i].quality = items[i].quality - 1
-				}
-			}
-		} else {
-			// Only item with increasing quality.
-			// Do nothing if already max Quality.
-			if items[i].quality < 50 {
-				items[i].quality = items[i].quality + 1
-				// Backstage exception: more increase depending on days left.
-				if items[i].name == "Backstage passes to a TAFKAL80ETC concert" {
-					if items[i].sellIn < 11 {
-						if items[i].quality < 50 {
-							items[i].quality = items[i].quality + 1
-						}
-					}
-					if items[i].sellIn < 6 {
-						if items[i].quality < 50 {
-							items[i].quality = items[i].quality + 1
-						}
-					}
-				}
-			}
-		}
-
-		// End the day.
-		if items[i].name != "Sulfuras, Hand of Ragnaros" {
-			items[i].sellIn = items[i].sellIn - 1
-		}
-
-		// Check if sellIn is in the past.
-		if items[i].sellIn < 0 {
-			if items[i].name != "Aged Brie" {
-				if items[i].name != "Backstage passes to a TAFKAL80ETC concert" {
-					if items[i].quality > 0 {
-						// Still do nothing with Sulfuras.
-						if items[i].name != "Sulfuras, Hand of Ragnaros" {
-							// Decrease a second time (twice as fast) if it is a normal item.
-							items[i].quality = items[i].quality - 1
-						}
-					}
-				} else {
-					// Drop the Backstage passes Quality to zero.
-					items[i].quality = items[i].quality - items[i].quality
-				}
-			} else {
-				// It is Aged Bried, always increasing Quality until max value.
-				if items[i].quality < 50 {
-					items[i].quality = items[i].quality + 1
-				}
-			}
-		}
-	}
-
+// String returns a human readable representation of the item.
+func (i ConjuredItem) String() string {
+	return fmt.Sprintf("%s, %d, %d", i.name, i.sellIn, i.quality)
 }
