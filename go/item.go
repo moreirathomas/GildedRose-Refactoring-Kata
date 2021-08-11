@@ -16,10 +16,10 @@ type CommonItem struct {
 }
 
 // RareItem represents an item which has a special behavior during its daily quality update.
-// The multiplier is obtained through the MultiplierFunc, allowing for configurable behaviors.
+// The multiplier is obtained through MultiplierFunc, allowing for configurable behaviors.
 type RareItem struct {
 	Item
-	MultiplierFunc MultiplierFunc
+	MultiplierFunc func(*Item) int
 }
 
 // LegendaryItem represents an item which never has to be sold or decreases in quality.
@@ -33,9 +33,6 @@ type ConjuredItem struct {
 	multiplier int
 }
 
-// MultiplierFunc represents a function to compute the update mutlitplier from an item.
-type MultiplierFunc func(*Item) int
-
 // Updater is an interface for an item which changes in quality at the end of each day.
 type Updater interface {
 	Update()        // String performs an update on the underlying data strcuture.
@@ -48,6 +45,22 @@ func newItem(name string, sellIn, quality int) Item {
 		name:    name,
 		sellIn:  sellIn,
 		quality: quality,
+	}
+}
+
+// updateQuality mutates the item quality given a multiplier.
+func updateQuality(i *Item, m int) {
+	// No early return if under 0 or above 50 because squential updates are not linear.
+	// As the multiplier value may vary based on the state of Item, the quality may go
+	// from 50 to 0. An early return would obscur such an update.
+	updated := i.quality + 1*m
+	switch {
+	case updated < 0:
+		i.quality = 0
+	case updated >= 50:
+		i.quality = 50
+	default:
+		i.quality = updated
 	}
 }
 
@@ -65,17 +78,11 @@ func NewCommonItem(name string, sellIn, quality int) *CommonItem {
 // If the sell by date has passed, the quality drop is doubled.
 func (i *CommonItem) Update() {
 	i.sellIn = i.sellIn - 1
-
-	if i.quality < 0 || i.quality >= 50 {
-		return
-	}
-
 	m := i.multiplier
 	if i.sellIn < 0 {
 		m = m * 2
 	}
-
-	i.quality = i.quality + 1*m
+	updateQuality(&i.Item, m)
 }
 
 // String returns a human readable representation of the item.
@@ -86,7 +93,7 @@ func (i CommonItem) String() string {
 // -- RareItem
 
 // NewRareItem returns a new rare item. Its quality multiplier is provided by multiplierFunc.
-func NewRareItem(name string, sellIn, quality int, multiplierFunc MultiplierFunc) *RareItem {
+func NewRareItem(name string, sellIn, quality int, multiplierFunc func(i *Item) int) *RareItem {
 	return &RareItem{
 		Item:           newItem(name, sellIn, quality),
 		MultiplierFunc: multiplierFunc,
@@ -97,14 +104,7 @@ func NewRareItem(name string, sellIn, quality int, multiplierFunc MultiplierFunc
 // MultiplierFunc is used to compute the quality change.
 func (i *RareItem) Update() {
 	i.sellIn = i.sellIn - 1
-
-	if i.quality < 0 || i.quality >= 50 {
-		return
-	}
-
-	m := i.MultiplierFunc(&i.Item)
-
-	i.quality = i.quality + 1*m
+	updateQuality(&i.Item, i.MultiplierFunc(&i.Item))
 }
 
 // String returns a human readable representation of the item.
@@ -143,17 +143,11 @@ func NewConjuredItem(name string, sellIn, quality int) *ConjuredItem {
 // If the sell by date has passed, the quality drop is doubled.
 func (i *ConjuredItem) Update() {
 	i.sellIn = i.sellIn - 1
-
-	if i.quality < 0 || i.quality >= 50 {
-		return
-	}
-
 	m := i.multiplier
 	if i.sellIn < 0 {
 		m = m * 2
 	}
-
-	i.quality = i.quality + 1*m
+	updateQuality(&i.Item, m)
 }
 
 // String returns a human readable representation of the item.

@@ -95,7 +95,7 @@ func TestRareItem(t *testing.T) {
 	}
 
 	// Quality drops to 0 after the concert
-	item = NewRareItem("Backstage passes to a TAFKAL80ETC concert", 0, 20, multiplierFunc)
+	item = NewRareItem("Backstage passes to a TAFKAL80ETC concert", 0, 50, multiplierFunc)
 	item.Update()
 	if item.sellIn != -1 {
 		t.Errorf("SellIn: Expected %d but got %d", -1, item.sellIn)
@@ -147,4 +147,23 @@ func TestConjuredItem(t *testing.T) {
 	if item.quality != 0 {
 		t.Errorf("Quality: Expected %d but got %d", 0, item.quality)
 	}
+}
+
+func TestQualityLimit(t *testing.T) {
+	// The Quality of an item is never negative.
+	degradingItem := NewCommonItem("Elixir of the Mongoose", 5, 0)
+	degradingItem.Update()
+	if degradingItem.quality != 0 {
+		t.Errorf("Quality: Expected %d but got %d", 0, degradingItem.quality)
+	}
+
+	// The Quality of an item is never more than 50.
+	upgradingItem := NewRareItem("Elixir of the Mongoose", 5, 50, func(i *Item) int { return 1 })
+	upgradingItem.Update()
+	if upgradingItem.quality != 50 {
+		t.Errorf("Quality: Expected %d but got %d", 50, upgradingItem.quality)
+	}
+
+	// The Quality of a legendary item is 80 and it never alters.
+	// This is tested via TestLegendaryItem.
 }
